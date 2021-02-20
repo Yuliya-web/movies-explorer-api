@@ -1,17 +1,23 @@
 const Movie = require('../models/movie');
+const RequestError = require('../errors/RequestError');
+const {
+  forbiddenText,
+  serverErrText,
+  movieIdErrorText,
+  deletedMovie,
+  validationErrorText,
+} = require('../constants/constants');
 
 // возвращает все сохраненные фильмы
-module.exports.getMovies = (req, res) => Movie.find({})
-  .populate(['owner', 'movieId'])
-  .then((movie) => res.send(movie))
-  .catch((err) => {
-    if (err.message === 'RequestError') {
-      res.status(400).send({ message: 'Некорректные данные' });
-    }
-  });
+module.exports.getMovies = (req, res, next) => {
+  Movie.find({ owner: req.user._id })
+    .orFail(new RequestError(validationErrorText))
+    .then((movies) => res.send(movies))
+    .catch(next);
+};
 
 // создаёт карточку фильма
-module.exports.createMovie = (req, res) => {
+module.exports.createMovie = (req, res, next) => {
   const {
     country,
     director,
@@ -23,6 +29,7 @@ module.exports.createMovie = (req, res) => {
     nameRU,
     nameEN,
     thumbnail,
+    movieId,
   } = req.body;
   Movie.create({
     country,
@@ -36,14 +43,15 @@ module.exports.createMovie = (req, res) => {
     nameEN,
     thumbnail,
     owner: req.user._id,
-    movieId: req.user._id, // временное значение, пока не подключились к стороннему сервису
+    movieId,
   })
-    .then((movie) => res.send(movie))
-    .catch((err) => {
-      if (err.name === 'ValidationError') {
-        res.status(400).send({ message: 'Ошибка добавления фильма' });
+    .then((movie) => {
+      if (!movie) {
+        throw new RequestError(validationErrorText);
       }
-    });
+      res.send(movie);
+    })
+    .catch((err) => next(err));
 };
 
 // удаляет фильм по идентификатору
@@ -55,15 +63,15 @@ module.exports.deleteMovie = (req, res) => {
         throw new Error('ForbiddenError');
       }
       movie.remove()
-        .then(() => res.status(200).send({ message: 'Фильм удален' }));
+        .then(() => res.status(200).send({ message: deletedMovie }));
     })
     .catch((err) => {
       if (err.message === 'AbsError') {
-        return res.status(404).send({ message: 'Фильм с таким id не найден' });
+        return res.status(404).send({ message: movieIdErrorText });
       }
       if (err.message === 'ForbiddenError') {
-        return res.status(403).send({ message: 'Нет прав на удаление' });
+        return res.status(403).send({ message: forbiddenText });
       }
-      return res.status(500).send({ message: 'Ошибка сервера' });
+      return res.status(500).send({ message: serverErrText });
     });
 };
