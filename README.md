@@ -6,7 +6,7 @@
 
 **Ссылки на проект**
 
-* [Ссылка] http://movies.students.nomoredomains.rocks - frontend, https://api.movies.students.nomoredomains.rocks - backend (IP: 178.154.252.34)
+* [Ссылка] https://movies.students.nomoredomains.rocks - frontend, https://api.movies.students.nomoredomains.rocks - backend (IP: 178.154.252.34)
 
 **Использованные технологии**
 
